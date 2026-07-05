@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>anti-aviator</title>
   </head>
   <body>
@@ -23,7 +23,7 @@
         </div>
         <div class="balance-box">
           <span>Balance</span>
-          <strong id="balanceLabel">1000</strong>
+          <strong id="balanceLabel">$1000</strong>
         </div>
       </header>
 
@@ -36,13 +36,13 @@
 
           <label class="field">
             <span>Callsign</span>
-            <input id="usernameInput" type="text" maxlength="18" autocomplete="off" />
+            <input id="usernameInput" type="text" maxlength="18" autocomplete="off" autocapitalize="characters" />
           </label>
 
           <div class="stake-row">
             <label class="field">
               <span>Stake</span>
-              <input id="stakeInput" type="number" min="1" max="300" step="1" />
+              <input id="stakeInput" type="number" min="1" max="300" step="1" inputmode="numeric" />
             </label>
             <div class="axis-pair stake-summary">
               <span id="stakeTimeLabel">ETA 20s</span>
@@ -53,7 +53,7 @@
           <div class="altitude-row">
             <label class="field">
               <span>Altitude ticks</span>
-              <input id="altitudeInput" type="number" min="1" max="100" step="1" />
+              <input id="altitudeInput" type="number" min="1" max="100" step="1" inputmode="numeric" />
             </label>
             <div class="stake-meter">
               <input id="altitudeRange" type="range" min="1" max="100" step="1" />

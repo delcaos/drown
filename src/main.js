@@ -33,8 +33,14 @@ const BOT_MIN_GAP_MS = 700;
 const BOT_MAX_GAP_MS = 1_900;
 const HISTORY_LIMIT = 8;
 const IMPACT_WINDOW_PX = 10;
-const PLANE_TRACE_RENDER_WIDTH = 112;
 const CHART_MAX_ALTITUDE = CONTINUOUS_CONFIG.maxFlightAltitude;
+const MOBILE_CANVAS_BREAKPOINT = 640;
+const PLANE_WIDTH = Object.freeze({
+  desktopMin: 78,
+  desktopMax: 150,
+  mobileMin: 56,
+  mobileMax: 104,
+});
 
 let planeTracePathCache = null;
 
@@ -548,12 +554,20 @@ function resizeCanvas() {
 }
 
 function createChartMapper(width, height, maxAltitude) {
-  const padding = {
-    left: 62,
-    right: 36,
-    top: 62,
-    bottom: 132,
-  };
+  const mobile = width <= MOBILE_CANVAS_BREAKPOINT;
+  const padding = mobile
+    ? {
+        left: 36,
+        right: 14,
+        top: 34,
+        bottom: 96,
+      }
+    : {
+        left: 62,
+        right: 36,
+        top: 62,
+        bottom: 132,
+      };
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
   const impactX = padding.left + plotWidth * 0.75;
@@ -572,6 +586,7 @@ function createChartMapper(width, height, maxAltitude) {
     leftX,
     bottomY,
     pxPerSecond,
+    mobile,
     xForImpactTime(impactTimeMs, now) {
       return impactX - ((impactTimeMs - now) / 1000) * pxPerSecond;
     },
@@ -631,9 +646,10 @@ function drawGrid(width, height, map, maxAltitude) {
   context.strokeStyle = 'rgba(243, 4, 63, 0.18)';
   context.fillStyle = 'rgba(245, 245, 240, 0.76)';
   context.lineWidth = 1;
-  context.font = '12px Inter, system-ui, sans-serif';
+  context.font = `${map.mobile ? 10 : 12}px Inter, system-ui, sans-serif`;
 
-  for (let seconds = -20; seconds <= 5; seconds += 5) {
+  const secondMarks = map.mobile ? [-20, -10, 0] : [-20, -15, -10, -5, 0, 5];
+  secondMarks.forEach((seconds) => {
     const x = map.impactX + seconds * map.pxPerSecond;
     if (seconds !== 0) {
       context.beginPath();
@@ -642,8 +658,8 @@ function drawGrid(width, height, map, maxAltitude) {
       context.stroke();
     }
     const label = seconds === 0 ? 'impact' : `${seconds > 0 ? '+' : ''}${seconds}s`;
-    context.fillText(label, x - 18, map.bottomY + 26);
-  }
+    context.fillText(label, x - (map.mobile ? 14 : 18), map.bottomY + (map.mobile ? 19 : 26));
+  });
 
   const altitudeStep = maxAltitude <= 50 ? 10 : 20;
   for (let altitude = 0; altitude <= maxAltitude; altitude += altitudeStep) {
@@ -652,17 +668,19 @@ function drawGrid(width, height, map, maxAltitude) {
     context.moveTo(map.leftX, y);
     context.lineTo(map.rightX, y);
     context.stroke();
-    context.fillText(`${altitude}`, 22, y + 4);
+    context.fillText(`${altitude}`, map.mobile ? 8 : 22, y + 4);
   }
 
-  context.fillStyle = 'rgba(245, 245, 240, 0.9)';
-  context.font = '600 12px Inter, system-ui, sans-serif';
-  context.fillText('impact timeline', width - 126, map.bottomY + 26);
-  context.save();
-  context.translate(18, map.padding.top + map.plotHeight / 2);
-  context.rotate(-Math.PI / 2);
-  context.fillText('altitude ticks', 0, 0);
-  context.restore();
+  if (!map.mobile) {
+    context.fillStyle = 'rgba(245, 245, 240, 0.9)';
+    context.font = '600 12px Inter, system-ui, sans-serif';
+    context.fillText('impact timeline', width - 126, map.bottomY + 26);
+    context.save();
+    context.translate(18, map.padding.top + map.plotHeight / 2);
+    context.rotate(-Math.PI / 2);
+    context.fillText('altitude ticks', 0, 0);
+    context.restore();
+  }
 
   context.strokeStyle = 'rgba(243, 4, 63, 0.75)';
   context.lineWidth = 1.5;
@@ -734,25 +752,28 @@ function drawChargePath(map, now) {
 }
 
 function drawAntiAircraftGun(map, now) {
-  const gunX = map.rightX - 64;
-  const gunY = map.bottomY + 84;
+  const scale = map.mobile ? 0.76 : 1;
+  const gunX = map.rightX - 64 * scale;
+  const gunY = map.bottomY + 84 * scale;
   const targetX = map.centerX;
   const targetY = map.yForAltitude(state.currentAltitude);
-  const pivotX = gunX - 8;
-  const pivotY = gunY - 33;
+  const pivotX = gunX - 8 * scale;
+  const pivotY = gunY - 33 * scale;
   const angle = Math.atan2(targetY - pivotY, targetX - pivotX);
   const muzzle = {
-    x: pivotX + Math.cos(angle) * 88,
-    y: pivotY + Math.sin(angle) * 88,
+    x: pivotX + Math.cos(angle) * 88 * scale,
+    y: pivotY + Math.sin(angle) * 88 * scale,
   };
 
   drawTracerFire({ start: muzzle, end: { x: targetX, y: targetY }, angle, now });
   drawRapidFlakBursts(targetX, targetY, now);
-  drawGunBody({ gunX, gunY, pivotX, pivotY, angle, now });
+  drawGunBody({ gunX, gunY, angle, now, scale });
 }
 
-function drawGunBody({ gunX, gunY, pivotX, pivotY, angle, now }) {
+function drawGunBody({ gunX, gunY, angle, now, scale = 1 }) {
   context.save();
+  context.translate(gunX, gunY);
+  context.scale(scale, scale);
   context.lineJoin = 'round';
   context.lineCap = 'round';
 
@@ -763,25 +784,25 @@ function drawGunBody({ gunX, gunY, pivotX, pivotY, angle, now }) {
   context.strokeStyle = 'rgba(10, 8, 8, 0.95)';
   context.lineWidth = 5;
   context.beginPath();
-  context.moveTo(gunX - 34, gunY + 12);
-  context.lineTo(gunX - 12, gunY - 5);
-  context.lineTo(gunX + 18, gunY + 12);
-  context.moveTo(gunX - 10, gunY + 7);
-  context.lineTo(gunX - 18, gunY + 26);
-  context.moveTo(gunX + 8, gunY + 7);
-  context.lineTo(gunX + 24, gunY + 26);
+  context.moveTo(-34, 12);
+  context.lineTo(-12, -5);
+  context.lineTo(18, 12);
+  context.moveTo(-10, 7);
+  context.lineTo(-18, 26);
+  context.moveTo(8, 7);
+  context.lineTo(24, 26);
   context.stroke();
 
   context.fillStyle = '#220b12';
   context.strokeStyle = '#f3043f';
   context.lineWidth = 2;
-  roundedRect(gunX - 38, gunY + 5, 74, 18, 5);
+  roundedRect(-38, 5, 74, 18, 5);
   context.fill();
   context.stroke();
 
   context.beginPath();
-  context.arc(gunX - 28, gunY + 25, 9, 0, Math.PI * 2);
-  context.arc(gunX + 27, gunY + 25, 9, 0, Math.PI * 2);
+  context.arc(-28, 25, 9, 0, Math.PI * 2);
+  context.arc(27, 25, 9, 0, Math.PI * 2);
   context.fillStyle = '#12090a';
   context.fill();
   context.stroke();
@@ -789,12 +810,12 @@ function drawGunBody({ gunX, gunY, pivotX, pivotY, angle, now }) {
   context.fillStyle = '#f3043f';
   context.strokeStyle = 'rgba(8, 6, 6, 0.95)';
   context.lineWidth = 3;
-  roundedRect(gunX - 24, gunY - 18, 42, 24, 7);
+  roundedRect(-24, -18, 42, 24, 7);
   context.fill();
   context.stroke();
 
   context.save();
-  context.translate(pivotX, pivotY);
+  context.translate(-8, -33);
   context.rotate(angle);
   context.shadowBlur = 10;
 
@@ -961,6 +982,8 @@ function drawPlaneRun(run, map, now) {
   }
 
   const y = map.yForAltitude(run.altitudeTicks);
+  const planeWidth = planeWidthForStake(run.stakeCredits, map);
+  const labelOffset = planeLabelOffset(planeWidth, map);
   const selected = state.selectedRunId === run.id;
   const userRun = run.kind === 'user';
   const planeSelected = selected && !userRun;
@@ -973,31 +996,50 @@ function drawPlaneRun(run, map, now) {
   }
 
   if (showImpact) {
-    drawFireball(x, y, impactAgeMs, planeSelected || userRun);
-    drawPlaneLabel(run.username, formatRunWager(run), x, y + 58, planeSelected || userRun);
+    drawFireball(x, y, impactAgeMs, planeSelected || userRun, planeWidth);
+    drawPlaneLabel(run.username, formatRunWager(run), x, y + labelOffset + 15, planeSelected || userRun, map.mobile);
   } else {
     drawSvgPlane({
       x,
       y,
       color: run.color,
+      width: planeWidth,
       selected: planeSelected,
       ghost: false,
       label: run.username,
       labelDetail: formatRunWager(run),
+      compact: map.mobile,
     });
   }
 
+  const hitboxWidth = Math.max(map.mobile ? 72 : 88, planeWidth * 0.92);
+  const hitboxHeight = Math.max(map.mobile ? 58 : 70, planeWidth * 0.66);
   state.hitboxes.push({
     runId: run.id,
-    x: x - 52,
-    y: y - 36,
-    width: 104,
-    height: 104,
+    x: x - hitboxWidth / 2,
+    y: y - hitboxHeight / 2,
+    width: hitboxWidth,
+    height: hitboxHeight,
   });
 }
 
 function formatRunWager(run) {
   return `${formatCredits(run.stakeCredits)} @ ${formatMultiplier(run.payoutMultiplier)}`;
+}
+
+function planeStakeRatio(stakeCredits) {
+  const stake = clamp(Number(stakeCredits) || 1, 1, CONTINUOUS_CONFIG.maxStake);
+  return Math.sqrt(stake / CONTINUOUS_CONFIG.maxStake);
+}
+
+function planeWidthForStake(stakeCredits, map) {
+  const minWidth = map.mobile ? PLANE_WIDTH.mobileMin : PLANE_WIDTH.desktopMin;
+  const maxWidth = map.mobile ? PLANE_WIDTH.mobileMax : PLANE_WIDTH.desktopMax;
+  return minWidth + planeStakeRatio(stakeCredits) * (maxWidth - minWidth);
+}
+
+function planeLabelOffset(planeWidth, map) {
+  return clamp(planeWidth * 0.38, map.mobile ? 27 : 34, map.mobile ? 42 : 56);
 }
 
 function drawLaunchPreview(map, now) {
@@ -1009,6 +1051,7 @@ function drawLaunchPreview(map, now) {
   const actualEntryX = map.xForImpactTime(preview.impactTimeMs, now);
   const x = Math.max(map.leftX + 24, actualEntryX);
   const y = map.yForAltitude(preview.altitudeTicks);
+  const planeWidth = planeWidthForStake(preview.stakeCredits, map);
 
   context.save();
   context.setLineDash([8, 7]);
@@ -1024,8 +1067,10 @@ function drawLaunchPreview(map, now) {
     x,
     y,
     color: PREVIEW_COLOR,
+    width: planeWidth,
     selected: true,
     ghost: true,
+    compact: map.mobile,
   });
 }
 
@@ -1040,13 +1085,15 @@ function drawSvgPlane({
   x,
   y,
   color,
+  width,
   selected = false,
   ghost = false,
   label = '',
   labelDetail = '',
+  compact = false,
 }) {
   const path = getPlaneTracePath();
-  const scale = PLANE_TRACE_RENDER_WIDTH / PLANE_TRACE_VIEWBOX.width;
+  const scale = width / PLANE_TRACE_VIEWBOX.width;
 
   context.save();
   context.translate(x, y);
@@ -1062,27 +1109,31 @@ function drawSvgPlane({
   context.restore();
 
   if (label) {
-    drawPlaneLabel(label, labelDetail, x, y + 43, selected);
+    drawPlaneLabel(label, labelDetail, x, y + planeLabelOffset(width, { mobile: compact }), selected, compact);
   }
 }
 
-function drawPlaneLabel(label, detail, x, y, selected = false) {
+function drawPlaneLabel(label, detail, x, y, selected = false, compact = false) {
   context.save();
   context.textAlign = 'center';
   context.strokeStyle = 'rgba(3, 2, 2, 0.86)';
   context.lineJoin = 'round';
-  context.lineWidth = 4;
+  context.lineWidth = compact ? 3 : 4;
 
-  context.font = selected ? '800 13px Inter, system-ui, sans-serif' : '700 12px Inter, system-ui, sans-serif';
+  context.font = selected
+    ? `800 ${compact ? 11 : 13}px Inter, system-ui, sans-serif`
+    : `700 ${compact ? 10 : 12}px Inter, system-ui, sans-serif`;
   context.fillStyle = '#fff8fa';
   context.strokeText(label, x, y);
   context.fillText(label, x, y);
 
   if (detail) {
-    context.font = selected ? '700 11px Inter, system-ui, sans-serif' : '650 10px Inter, system-ui, sans-serif';
+    context.font = selected
+      ? `700 ${compact ? 9 : 11}px Inter, system-ui, sans-serif`
+      : `650 ${compact ? 9 : 10}px Inter, system-ui, sans-serif`;
     context.fillStyle = 'rgba(255, 245, 247, 0.88)';
-    context.strokeText(detail, x, y + 13);
-    context.fillText(detail, x, y + 13);
+    context.strokeText(detail, x, y + (compact ? 11 : 13));
+    context.fillText(detail, x, y + (compact ? 11 : 13));
   }
   context.restore();
 }
@@ -1128,9 +1179,9 @@ function drawUserPlaneMarker(x, y, now) {
   context.restore();
 }
 
-function drawFireball(x, y, impactAgeMs, selected = false) {
+function drawFireball(x, y, impactAgeMs, selected = false, planeWidth = PLANE_WIDTH.desktopMin) {
   const pulse = 0.84 + Math.sin(impactAgeMs / 74) * 0.16;
-  const radius = 34 * pulse;
+  const radius = clamp(planeWidth * 0.34, 25, 48) * pulse;
   const glow = context.createRadialGradient(x - 6, y - 7, 2, x, y, radius * 1.45);
   glow.addColorStop(0, '#fff7cf');
   glow.addColorStop(0.2, '#ffb000');

@@ -20,10 +20,15 @@
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  background: #090606;
+}
+
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(circle at 74% 14%, rgba(243, 4, 63, 0.2), transparent 30%),
     radial-gradient(circle at 16% 70%, rgba(243, 4, 63, 0.13), transparent 28%),
@@ -36,8 +41,14 @@ select {
   font: inherit;
 }
 
+button,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
 button {
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button:disabled {
@@ -45,7 +56,7 @@ button:disabled {
 }
 
 #app {
-  min-height: 100vh;
+  min-height: 100svh;
   padding: 18px;
 }
 
@@ -230,6 +241,16 @@ select {
   outline: none;
 }
 
+input[type="number"] {
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
 input:focus,
 select:focus,
 button:focus-visible {
@@ -344,6 +365,7 @@ canvas {
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: manipulation;
 }
 
 .right-rail {
@@ -515,31 +537,309 @@ canvas {
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 860px) {
+  body {
+    background:
+      radial-gradient(circle at 50% 0%, rgba(243, 4, 63, 0.22), transparent 28%),
+      linear-gradient(180deg, #171111 0%, #0b0708 54%, #050505 100%);
+  }
+
   #app {
-    padding: 12px;
+    padding: 10px 10px calc(12px + env(safe-area-inset-bottom));
   }
 
-  .quote-grid,
-  .inspect-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .canvas-frame {
-    height: 440px;
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand balance"
+      "stream stream";
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   .brand-lockup {
-    gap: 9px;
+    grid-area: brand;
+    gap: 8px;
   }
 
   .brand-icon {
-    width: 64px;
-    height: 64px;
-    margin: -4px 4px -4px 0;
+    width: 56px;
+    height: 56px;
+    margin: -4px 0;
+  }
+
+  .brand-icon-frame img {
+    transform: translateX(2px) scale(1.5);
   }
 
   h1 {
-    font-size: 1.65rem;
+    font-size: 1.32rem;
+    max-width: 150px;
+  }
+
+  .balance-box {
+    grid-area: balance;
+    min-width: 104px;
+    min-height: 42px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .balance-box span {
+    display: none;
+  }
+
+  .balance-box strong {
+    font-size: 1.05rem;
+  }
+
+  .stream-strip {
+    grid-area: stream;
+    min-height: 36px;
+    justify-content: space-between;
+    padding: 7px 9px;
+    gap: 8px;
+  }
+
+  .stream-strip span:first-child {
+    display: none;
+  }
+
+  .phase-badge {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+
+  #timerLabel {
+    font-size: 1rem;
+  }
+
+  .game-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .chart-panel {
+    order: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 7px;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34);
+  }
+
+  .canvas-frame {
+    height: clamp(300px, 46svh, 430px);
+    border-radius: 7px;
+  }
+
+  .control-panel {
+    order: 2;
+    position: sticky;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 5;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    grid-template-areas:
+      "callsign stake"
+      "altitude altitude"
+      "quote quote"
+      "launch reset"
+      "message message";
+    gap: 8px;
+    padding: 10px;
+    background: rgba(14, 8, 10, 0.96);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.56);
+    backdrop-filter: blur(14px);
+  }
+
+  .control-panel .panel-heading {
+    display: none;
+  }
+
+  .control-panel > .field {
+    grid-area: callsign;
+  }
+
+  .stake-row {
+    grid-area: stake;
+    gap: 5px;
+  }
+
+  .altitude-row {
+    grid-area: altitude;
+    grid-template-columns: 102px minmax(0, 1fr);
+    align-items: end;
+    gap: 9px;
+  }
+
+  .stake-meter {
+    gap: 7px;
+    padding-bottom: 2px;
+  }
+
+  .quote-grid {
+    grid-area: quote;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .quote-grid div {
+    padding: 7px 8px;
+  }
+
+  .primary-action {
+    grid-area: launch;
+  }
+
+  .secondary-action {
+    grid-area: reset;
+  }
+
+  .status-line {
+    grid-area: message;
+    min-height: 20px;
+    font-size: 0.76rem;
+  }
+
+  .field {
+    gap: 5px;
+  }
+
+  .field span,
+  dt {
+    font-size: 0.68rem;
+  }
+
+  input,
+  select {
+    min-height: 44px;
+    padding: 0 10px;
+  }
+
+  input[type="range"] {
+    min-height: 36px;
+  }
+
+  .primary-action,
+  .secondary-action {
+    min-height: 48px;
+    padding: 0 10px;
+  }
+
+  .secondary-action {
+    font-size: 0.78rem;
+  }
+
+  dd {
+    font-size: 0.82rem;
+  }
+
+  .axis-pair {
+    font-size: 0.7rem;
+  }
+
+  .right-rail {
+    order: 3;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .panel-block {
+    min-width: 0;
+    padding: 11px;
+  }
+
+  .panel-heading.compact {
+    margin-bottom: 8px;
+  }
+
+  .player-list {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    max-height: none;
+    overflow-x: auto;
+    padding: 0 2px 3px;
+    scroll-snap-type: x proximity;
+  }
+
+  .player-row {
+    flex: 0 0 190px;
+    min-width: 190px;
+    min-height: 50px;
+    scroll-snap-align: start;
+  }
+
+  .inspect-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .history-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  #app {
+    padding-inline: 8px;
+  }
+
+  .canvas-frame {
+    height: clamp(290px, 43svh, 390px);
+  }
+
+  .control-panel {
+    grid-template-columns: minmax(0, 1fr) 94px;
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .altitude-row {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .quote-grid {
+    gap: 5px;
+  }
+
+  .quote-grid div {
+    padding: 6px;
+  }
+
+  .history-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .brand-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  h1 {
+    font-size: 1.14rem;
+    max-width: 128px;
+  }
+
+  .balance-box {
+    min-width: 92px;
+  }
+
+  .control-panel {
+    grid-template-columns: minmax(0, 1fr) 86px;
+  }
+
+  .altitude-row {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+
+  .secondary-action {
+    font-size: 0.72rem;
   }
 }
